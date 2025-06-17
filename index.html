@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="حاسبة إسلامية لحساب توزيع المواريث وفق الشريعة الإسلامية وحساب الزكاة بدقة وسهولة">
+  <title>حاسبة المواريث والزكاة الإسلامية</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&family=Amiri:wght@400;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+</head>
+
+<body class="islamic">
+  <div class="hero">
+    <img src="assets/hero-image.jpg" alt="Islamic Architecture" class="hero-image" loading="lazy">
+    <div class="hero-content">
+      <h1>حاسبة المواريث والزكاة</h1>
+      <p>احسب توزيع التركة والزكاة وفق الشريعة الإسلامية</p>
+      <button class="cta-button" onclick="scrollToCalculator()">ابدأ الآن</button>
+    </div>
+  </div>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>القائمة</h2>
+      <button class="close-sidebar" onclick="toggleSidebar()"><i class="fas fa-times"></i></button>
+    </div>
+    <nav>
+      <a href="#" onclick="switchSection('mirath')" class="active">حاسبة المواريث</a>
+      <a href="#" onclick="switchSection('zakat')">حاسبة الزكاة</a>
+      <a href="#" onclick="showOnboarding()">جولة تعريفية</a>
+      <a href="#feedback-section">ملاحظاتكم</a>
+    </nav>
+  </div>
+  <div class="main-content">
+    <header>
+      <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <div class="theme-switcher">
+        <button onclick="setTheme('light')"><i class="fas fa-sun"></i></button>
+        <button onclick="setTheme('dark')"><i class="fas fa-moon"></i></button>
+        <button onclick="setTheme('islamic')"><i class="fas fa-star-and-crescent"></i></button>
+      </div>
+    </header>
+    <div class="container" id="calculator">
+      <nav class="section-tabs" role="tablist">
+        <button role="tab" aria-selected="true" class="tab active" onclick="switchSection('mirath')">حاسبة
+          المواريث</button>
+        <button role="tab" aria-selected="false" class="tab" onclick="switchSection('zakat')">حاسبة الزكاة</button>
+      </nav>
+      <div id="mirath-section" class="section active">
+        <div class="disclaimer grid-card">
+          <p>تنبيه: هذه الأداة توفر حسابات مبدئية. للحالات المعقدة، استشر عالمًا شرعيًا.</p>
+        </div>
+        <div id="inheritance-form" class="grid-card">
+          <div class="progress-stepper">
+            <div class="step active" data-step="1" tabindex="0" role="button" aria-label="الخطوة 1: التركة">1. التركة
+            </div>
+            <div class="step" data-step="2" tabindex="0" role="button" aria-label="الخطوة 2: المتوفى">2. المتوفى</div>
+            <div class="step" data-step="3" tabindex="0" role="button" aria-label="الخطوة 3: الورثة">3. الورثة</div>
+          </div>
+          <div class="form-section active" data-step="1">
+            <h2>معلومات التركة</h2>
+            <div class="input-group">
+              <label for="estateValue">قيمة التركة (دينار أردني)<span class="tooltip" id="estateValue-tooltip"
+                  data-tooltip="أدخل إجمالي قيمة التركة قبل الديون أو الوصايا">ⓘ</span></label>
+              <input type="number" id="estateValue" min="0" aria-describedby="estateValue-error estateValue-tooltip"
+                required>
+              <span class="error-message" id="estateValue-error"></span>
+            </div>
+            <div class="input-group">
+              <label for="estateValueOp">قيمة العقارات / السيارات (دينار أردني)<span class="tooltip"
+                  id="estateValue-tooltip" data-tooltip="أدخل قيمة العقارات / السيارات (دينار أردني)">ⓘ</span></label>
+              <input type="number" id="estateValueOp" min="0" aria-describedby="estateValue-error estateValue-tooltip">
+              <span class="error-message" id="estateValue-error"></span>
+            </div>
+            <div class="input-group">
+              <label for="debts">الديون (دينار أردني)<span class="tooltip" id="debts-tooltip"
+                  data-tooltip="أدخل إجمالي الديون المستحقة على التركة">ⓘ</span></label>
+              <input type="number" id="debts" min="0" aria-describedby="debts-error debts-tooltip">
+              <span class="error-message" id="debts-error"></span>
+            </div>
+            <div class="input-group">
+              <label for="bequests">الوصايا (دينار أردني)<span class="tooltip" id="bequests-tooltip"
+                  data-tooltip="الوصايا لا يمكن أن تتجاوز ثلث التركة بعد الديون">ⓘ</span></label>
+              <input type="number" id="bequests" min="0" aria-describedby="bequests-error bequests-tooltip">
+              <span class="error-message" id="bequests-error"></span>
+            </div>
+          </div>
+          <div class="form-section" data-step="2">
+            <h2>معلومات المتوفى</h2>
+            <div class="input-group">
+
+              <label for="deceased-gender">جنس المتوفى</label>
+
+              <select id="deceased-gender" onchange="toggleHusbandField()">
+                <option value="male">ذكر</option>
+                <option value="female">أنثى</option>
+              </select>
+            </div>
+            <div id="husband-field" style="display: none;">
+              <div class="input-group" data-type="husband">
+                <label for="husband" id="husband-label">هل يوجد زوج؟</label>
+                <select id="husband">
+                  <option value="yes">نعم</option>
+                  <option value="no">لا</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="important-notify">
+            <span>ملاحظة: </span>ٱلْقَاتِلُ لَا يَرِثُ
+          </div>
+          <div class="form-section" data-step="3">
+            <h2>الورثة</h2>
+
+            <div class="input-group" data-type="wife">
+              <label for="wives">عدد الزوجات<span class="tooltip" id="wives-tooltip"
+                  data-tooltip="أدخل عدد الزوجات للمتوفى (إذا كان ذكرًا)">ⓘ</span></label>
+              <input type="number" id="wives" min="0" value="0" aria-describedby="wives-error wives-tooltip">
+              <span class="error-message" id="wives-error"></span>
+            </div>
+            <div class="input-group" data-type="son">
+              <label for="sons">عدد الأبناء الذكور</label>
+              <input type="number" id="sons" min="0" value="0">
+            </div>
+            <div class="input-group" data-type="daughter">
+              <label for="daughters">عدد البنات</label>
+              <input type="number" id="daughters" min="0" value="0">
+            </div>
+            <div class="input-group" data-type="grandSon">
+              <label for="grand son">عدد ابناء الابن</label>
+              <input type="number" id="grandSon" min="0" value="0">
+            </div>
+            <div class="input-group" data-type="grandDaughter">
+              <label for="grand daughter">عدد بنات الابن</label>
+              <input type="number" id="grandDaughter" min="0" value="0">
+            </div>
+            <div class="input-group" data-type="father">
+              <label for="father">هل الأب على قيد الحياة؟</label>
+              <select id="father">
+                <option value="yes">نعم</option>
+                <option value="no">لا</option>
+              </select>
+            </div>
+            <div class="input-group" data-type="mother">
+              <label for="mother">هل الأم على قيد الحياة؟</label>
+              <select id="mother">
+                <option value="yes">نعم</option>
+                <option value="no">لا</option>
+              </select>
+            </div>
+            <div class="input-group" data-type="pGrandFather">
+              <label for="paternal grand father">هل أب الأب على قيد الحياة؟</label>
+              <select id="pGrandFather">
+                <option value="yes">نعم</option>
+                <option value="no">لا</option>
+              </select>
+            </div>
+            <div class="input-group" data-type="pGrandMother">
+              <label for="paternal grand mother">هل أم الأب على قيد الحياة؟</label>
+              <select id="pGrandMother">
+                <option value="yes">نعم</option>
+                <option value="no">لا</option>
+              </select>
+            </div>
+
+            <div class="input-group" data-type="fullBrother">
+              <label for="full brothers"> عدد الإخوة الأشقاء </label>
+              <input type="number" id="fSiblingsBrother" min="0" value="0">
+            </div>
+            <div class="input-group" data-type="fullSister">
+              <label for="full sisters"> عدد الأخوات الشقيقات</label>
+              <input type="number" id="fSiblingsSister" min="0" value="0">
+            </div>
+            <div class="input-group" data-type="paternalBrother">
+              <label for="paternal brothers"> عدد الإخوة لأب</label>
+              <input type="number" id="pSiblingsBrother" min="0" value="0">
+            </div>
+            <div class="input-group" data-type="paternalSister">
+              <label for="paternal Sisters">عدد الأخوات لأب </label>
+              <input type="number" id="pSiblingsSister" min="0" value="0">
+            </div>
+            <div class="input-group" data-type="maternalSiblings">
+              <label for="maternal Siblings"> ( الذكور والإناث معًا.) الإخوة لأم</label>
+              <input type="number" id="mSiblings" min="0" value="0">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" onclick="calculateInheritance()">احسب المواريث</button>
+
+          </div>
+        </div>
+        <div id="mirath-results" class="grid-card">
+          <div id="mirath-results-text"></div>
+          <table id="mirath-results-table" style="display: none;" aria-label="جدول توزيع المواريث">
+            <caption>توزيع التركة حسب الشريعة الإسلامية</caption>
+            <thead>
+              <tr>
+                <th scope="col">الوريث</th>
+                <th scope="col">العدد</th>
+                <th scope="col">الحصة (دينار)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot>
+              <tr>
+                <td>الإجمالي</td>
+                <td></td>
+                <td id="total-share"></td>
+              </tr>
+            </tfoot>
+          </table>
+          <table id="mirath-accessible-table" style="display: none;" aria-hidden="true"></table>
+          <div class="results-actions">
+            <button onclick="saveCalculation('mirath')">حفظ الحساب</button>
+            <select onchange="loadCalculation(this.value, 'mirath')">
+              <option value="">اختر حساباً محفوظاً</option>
+            </select>
+          </div>
+          <div class="share-buttons">
+            <button class="share-button whatsapp" onclick="shareOnWhatsApp('mirath')"><i class="fab fa-whatsapp"></i>
+              مشاركة عبر واتساب</button>
+            <button class="share-button twitter" onclick="shareOnTwitter('mirath')"><i class="fab fa-twitter"></i>
+              مشاركة عبر تويتر</button>
+          </div>
+          <details id="mirath-calculation-details">
+            <summary>تفاصيل الحساب</summary>
+            <div id="mirath-details-content"></div>
+          </details>
+          <div class="chart-toggle">
+            <button class="active" onclick="toggleChart('pie', 'mirath')"
+              onkeypress="handleChartToggleKeypress(event, 'pie', 'mirath')">مخطط دائري</button>
+            <button onclick="toggleChart('bar', 'mirath')"
+              onkeypress="handleChartToggleKeypress(event, 'bar', 'mirath')">مخطط أعمدة</button>
+            <button onclick="downloadChartsAsPDF('mirath')" aria-label="تحميل المخططات كملف PDF">تحميل المخططات كـ
+              PDF</button>
+          </div>
+          <div class="chart-container">
+            <canvas id="mirath-sharesChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div id="zakat-section" class="section">
+        <div class="disclaimer grid-card">
+          <p>تنبيه: هذه الأداة توفر حسابات مبدئية. للحالات المعقدة، استشر عالمًا شرعيًا.</p>
+        </div>
+        <div id="zakat-form" class="grid-card">
+          <h2>معلومات الثروة</h2>
+          <div class="input-group">
+            <label for="cash">النقد (دينار أردني)<span class="tooltip" id="cash-tooltip"
+                data-tooltip="أدخل إجمالي النقد المتوفر">ⓘ</span></label>
+            <input type="number" id="cash" min="0" aria-describedby="cash-error cash-tooltip">
+            <span class="error-message" id="cash-error"></span>
+          </div>
+          <div class="input-group">
+            <label for="gold">الذهب (غرام)<span class="tooltip" id="gold-tooltip"
+                data-tooltip="أدخل وزن الذهب بالغرامات">ⓘ</span></label>
+            <input type="number" id="gold" min="0" aria-describedby="gold-error gold-tooltip">
+            <span class="error-message" id="gold-error"></span>
+          </div>
+          <div class="input-group">
+            <label for="silver">الفضة (غرام)<span class="tooltip" id="silver-tooltip"
+                data-tooltip="أدخل وزن الفضة بالغرامات">ⓘ</span></label>
+            <input type="number" id="silver" min="0" aria-describedby="silver-error silver-tooltip">
+            <span class="error-message" id="silver-error"></span>
+          </div>
+          <div class="input-group">
+            <label for="investments">الاستثمارات (دينار أردني)<span class="tooltip" id="investments-tooltip"
+                data-tooltip="أدخل قيمة الاستثمارات الخاضعة للزكاة">ⓘ</span></label>
+            <input type="number" id="investments" min="0" aria-describedby="investments-error investments-tooltip">
+            <span class="error-message" id="investments-error"></span>
+          </div>
+          <div class="input-group">
+            <label for="zakat-debts">الديون (دينار أردني)<span class="tooltip" id="zakat-debts-tooltip"
+                data-tooltip="أدخل الديون المستحقة التي تقلل من الثروة">ⓘ</span></label>
+            <input type="number" id="zakat-debts" min="0" aria-describedby="zakat-debts-error zakat-debts-tooltip">
+            <span class="error-message" id="zakat-debts-error"></span>
+          </div>
+          <div class="form-actions">
+            <button type="button" onclick="calculateZakat()">احسب الزكاة</button>
+            <button type="button" class="reset" onclick="resetForm('zakat')" title="مسح جميع المدخلات والنتائج">مسح
+              الكل</button>
+          </div>
+        </div>
+        <div id="zakat-results" class="grid-card">
+          <div id="zakat-results-text"></div>
+          <table id="zakat-results-table" style="display: none;" aria-label="جدول توزيع الزكاة">
+            <caption>توزيع الزكاة حسب الشريعة الإسلامية</caption>
+            <thead>
+              <tr>
+                <th scope="col">البند</th>
+                <th scope="col">المبلغ (دينار)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <table id="zakat-accessible-table" style="display: none;" aria-hidden="true"></table>
+          <div class="results-actions">
+            <button onclick="saveCalculation('zakat')">حفظ الحساب</button>
+            <select onchange="loadCalculation(this.value, 'zakat')">
+              <option value="">اختر حساباً محفوظاً</option>
+            </select>
+          </div>
+          <div class="share-buttons">
+            <button class="share-button whatsapp" onclick="shareOnWhatsApp('zakat')"><i class="fab fa-whatsapp"></i>
+              مشاركة عبر واتساب</button>
+            <button class="share-button twitter" onclick="shareOnTwitter('zakat')"><i class="fab fa-twitter"></i> مشاركة
+              عبر تويتر</button>
+          </div>
+          <details id="zakat-calculation-details">
+            <summary>تفاصيل الحساب</summary>
+            <div id="zakat-details-content"></div>
+          </details>
+          <div class="chart-toggle">
+            <button class="active" onclick="toggleChart('pie', 'zakat')"
+              onkeypress="handleChartToggleKeypress(event, 'pie', 'zakat')">مخطط دائري</button>
+            <button onclick="toggleChart('bar', 'zakat')"
+              onkeypress="handleChartToggleKeypress(event, 'bar', 'zakat')">مخطط أعمدة</button>
+            <button onclick="downloadChartsAsPDF('zakat')" aria-label="تحميل المخططات كملف PDF">تحميل المخططات كـ
+              PDF</button>
+          </div>
+          <div class="chart-container">
+            <canvas id="zakat-sharesChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="more-info grid-card">
+        <p>لمزيد من المعلومات، زر <a href="https://www.islamweb.net">إسلام ويب</a>.</p>
+      </div>
+      <div class="feedback-section grid-card" id="feedback-section">
+        <h2>ملاحظاتكم</h2>
+        <!-- Note: Replace 'your_form_id' in jp3.js submitFeedback() with a valid Formspree ID for production -->
+        <div id="feedback-form">
+          <div class="input-group">
+            <label for="feedback-name">الاسم</label>
+            <input type="text" id="feedback-name" name="name" required>
+          </div>
+          <div class="input-group">
+            <label for="feedback-email">البريد الإلكتروني</label>
+            <input type="email" id="feedback-email" name="email" required>
+          </div>
+          <div class="input-group">
+            <label for="feedback-message">الرسالة</label>
+            <textarea id="feedback-message" name="message" required></textarea>
+          </div>
+          <button type="button" onclick="submitFeedback()">إرسال</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="onboarding-modal">
+    <div class="modal-content grid-card">
+      <span class="close-modal" onclick="closeOnboarding()">×</span>
+      <h2>مرحبًا بكم</h2>
+      <div class="carousel">
+        <div class="carousel-item active">
+          <h3>اختر القسم</h3>
+          <p>استخدم الألسنة للتبديل بين المواريث والزكاة.</p>
+        </div>
+        <div class="carousel-item">
+          <h3>أدخل بيانات المواريث</h3>
+          <p>حدد التركة، الديون، والورثة بدقة.</p>
+        </div>
+        <div class="carousel-item">
+          <h3>أدخل بيانات الزكاة</h3>
+          <p>أدخل النقد، الذهب، والاستثمارات.</p>
+        </div>
+        <div class="carousel-item">
+          <h3>راجع النتائج</h3>
+          <p>عرض النتائج مع مخططات وحفظ/مشاركة.</p>
+        </div>
+      </div>
+      <button class="carousel-nav prev" onclick="changeCarousel(-1)">❯</button>
+      <button class="carousel-nav next" onclick="changeCarousel(1)">❮</button>
+      <button class="modal-button" onclick="closeOnboarding()">ابدأ الآن</button>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+    onerror="this.src='assets/chart.min.js'"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"
+    onerror="this.src='assets/chartjs-plugin-datalabels.min.js'"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+    onerror="this.src='assets/html2canvas.min.js'"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+    onerror="this.src='assets/jspdf.umd.min.js'"></script>
+  <script src="jp3.js"></script>
+</body>
+
+</html>

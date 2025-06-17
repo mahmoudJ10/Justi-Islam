@@ -1,0 +1,1943 @@
+let currentChartType = { mirath: 'pie', zakat: 'pie' };
+let currentCarouselIndex = 0;
+
+// Load Chart.js and plugin locally if CDN fails
+async function loadChartLibraries() {
+  if (window.Chart && window.ChartDataLabels) {
+    console.log('Chart.js and ChartDataLabels already loaded');
+    return true;
+  }
+
+  console.log('Attempting to load Chart.js and ChartDataLabels locally');
+  try {
+    const scripts = [
+      { id: 'chartjs', src: 'assets/chart.min.js', name: 'Chart.js' },
+      { id: 'chartjs-datalabels', src: 'assets/chartjs-plugin-datalabels.min.js', name: 'ChartDataLabels' }
+    ];
+
+    for (const script of scripts) {
+      if (!document.getElementById(script.id)) {
+        console.log(`Loading ${script.src}`);
+        await new Promise((resolve, reject) => {
+          const element = document.createElement('script');
+          element.id = script.id;
+          element.src = script.src;
+          element.async = false;
+          element.onload = () => {
+            console.log(`${script.name} loaded successfully`);
+            resolve();
+          };
+          element.onerror = () => {
+            console.error(`Failed to load ${script.src}`);
+            reject(new Error(`Failed to load ${script.name} from ${script.src}`));
+          };
+          document.head.appendChild(element);
+        });
+      } else {
+        console.log(`${script.name} script already present`);
+      }
+    }
+    console.log('Local Chart.js and ChartDataLabels loaded successfully');
+    return true;
+  } catch (error) {
+    console.error('Error loading local chart libraries:', error.message);
+    return false;
+  }
+}
+
+// Load html2canvas and jsPDF locally if CDN fails
+async function loadPDLibraries() {
+  if (window.html2canvas && window.jspdf) {
+    console.log('html2canvas and jsPDF already loaded');
+    return true;
+  }
+
+  console.log('Attempting to load html2canvas and jsPDF locally');
+  try {
+    const scripts = [
+      { id: 'html2canvas', src: 'assets/html2canvas.min.js', name: 'html2canvas' },
+      { id: 'jspdf', src: 'assets/jspdf.umd.min.js', name: 'jsPDF' }
+    ];
+
+    for (const script of scripts) {
+      if (!document.getElementById(script.id)) {
+        console.log(`Loading ${script.src}`);
+        await new Promise((resolve, reject) => {
+          const element = document.createElement('script');
+          element.id = script.id;
+          element.src = script.src;
+          element.async = false;
+          element.onload = () => {
+            console.log(`${script.name} loaded successfully`);
+            resolve();
+          };
+          element.onerror = () => {
+            console.error(`Failed to load ${script.src}`);
+            reject(new Error(`Failed to load ${script.name} from ${script.src}`));
+          };
+          document.head.appendChild(element);
+        });
+      } else {
+        console.log(`${script.name} script already present`);
+      }
+    }
+    console.log('Local html2canvas and jsPDF loaded successfully');
+    return true;
+  } catch (error) {
+    console.error('Error loading local PDF libraries:', error.message);
+    return false;
+  }
+}
+
+function toggleHusbandField() {
+  let gender = document.getElementById("deceased-gender").value;
+  let husbandLabel = document.getElementById("husband-label");
+  let husbandSelect = document.getElementById("husband");
+  if (gender === "female") {
+    husbandLabel.style.display = "block";
+    husbandSelect.style.display = "block";
+  } else {
+    husbandLabel.style.display = "none";
+    husbandSelect.style.display = "none";
+  }
+}
+
+function validateInput(fieldId, errorId, message, condition) {
+  let input = document.getElementById(fieldId);
+  let error = document.getElementById(errorId);
+  if (condition(input.value)) {
+    error.textContent = message;
+    error.classList.add("show");
+    input.classList.add("error");
+    return false;
+  } else {
+    error.textContent = "";
+    error.classList.remove("show");
+    input.classList.remove("error");
+    return true;
+  }
+}
+
+function validateBequests() {
+  let estateValue = parseFloat(document.getElementById("estateValue").value) || 0;
+  let debts = parseFloat(document.getElementById("debts").value) || 0;
+  let bequests = parseFloat(document.getElementById("bequests").value) || 0;
+  let netEstate = estateValue - debts;
+  let maxBequests = netEstate / 3;
+  let error = document.getElementById("bequests-error");
+  if (netEstate < 0) {
+    error.textContent = "التركة سلبية بعد الديون، لا يمكن إدخال وصايا.";
+    error.classList.add("show");
+    return false;
+  } else if (bequests > maxBequests && netEstate > 0) {
+    error.textContent = `الوصايا لا يمكن أن تتجاوز ثلث التركة (${maxBequests.toFixed(2)} دينار).`;
+    error.classList.add("show");
+    return false;
+  } else {
+    error.textContent = "";
+    error.classList.remove("show");
+    return true;
+  }
+}
+
+function setupValidation() {
+  document.getElementById("estateValue").addEventListener("input", () => {
+    validateInput("estateValue", "estateValue-error", "يرجى إدخال قيمة غير سالبة.", value => value < 0);
+    validateBequests();
+  });
+  document.getElementById("debts").addEventListener("input", () => {
+    validateInput("debts", "debts-error", "يرجى إدخال قيمة غير سالبة.", value => value < 0);
+    validateBequests();
+  });
+  document.getElementById("bequests").addEventListener("input", () => {
+    validateInput("bequests", "bequests-error", "يرجى إدخال قيمة غير سالبة.", value => value < 0);
+    validateBequests();
+  });
+  document.getElementById("wives").addEventListener("input", () => {
+    let gender = document.getElementById("deceased-gender").value;
+    validateInput("wives", "wives-error", 
+      gender === "female" ? "لا يمكن إدخال زوجات لمتوفاة أنثى." : "يرجى إدخال عدد غير سالب.",
+      value => (gender === "female" && value > 0) || value < 0
+    );
+  });
+
+  ['cash', 'gold', 'silver', 'investments', 'zakat-debts'].forEach(field => {
+    document.getElementById(field).addEventListener("input", () => {
+      validateInput(field, `${field}-error`, "يرجى إدخال قيمة غير سالبة.", value => value < 0);
+    });
+  });
+}
+
+function scrollToCalculator() {
+  document.getElementById("calculator").scrollIntoView({ behavior: "smooth" });
+}
+
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("active");
+  document.querySelector(".main-content").classList.toggle("sidebar-active");
+}
+
+function setTheme(theme) {
+  document.body.classList.remove("light", "dark", "islamic");
+  document.body.classList.add(theme);
+  localStorage.setItem("theme", theme);
+}
+
+function switchSection(section) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.section-tabs .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
+  
+  document.getElementById(`${section}-section`).classList.add('active');
+  document.querySelector(`.section-tabs .tab[onclick="switchSection('${section}')"]`).classList.add('active');
+  document.querySelector(`.sidebar nav a[onclick="switchSection('${section}')"]`).classList.add('active');
+  
+  document.querySelector(`.section-tabs .tab[onclick="switchSection('${section}')"]`).setAttribute('aria-selected', 'true');
+  document.querySelector(`.section-tabs .tab[onclick="switchSection('mirath')"]`).setAttribute('aria-selected', section === 'mirath' ? 'true' : 'false');
+  document.querySelector(`.section-tabs .tab[onclick="switchSection('zakat')"]`).setAttribute('aria-selected', section === 'zakat' ? 'true' : 'false');
+}
+
+function showOnboarding() {
+  document.getElementById("onboarding-modal").classList.add("active");
+  currentCarouselIndex = 0;
+  updateCarousel();
+}
+
+function closeOnboarding() {
+  document.getElementById("onboarding-modal").classList.remove("active");
+  localStorage.setItem("onboardingSeen", "true");
+}
+
+function changeCarousel(direction) {
+  let items = document.querySelectorAll(".carousel-item");
+  currentCarouselIndex = (currentCarouselIndex + direction + items.length) % items.length;
+  updateCarousel();
+}
+
+function updateCarousel() {
+  let items = document.querySelectorAll(".carousel-item");
+  items.forEach((item, index) => {
+    item.classList.toggle("active", index === currentCarouselIndex);
+  });
+}
+
+function shareOnWhatsApp(section) {
+  let text = section === 'mirath' 
+    ? encodeURIComponent("جرب حاسبة المواريث الإسلامية: " + window.location.href)
+    : encodeURIComponent("جرب حاسبة الزكاة الإسلامية: " + window.location.href);
+  window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+}
+
+function shareOnTwitter(section) {
+  let text = section === 'mirath' 
+    ? encodeURIComponent("حاسبة المواريث الإسلامية - احسب توزيع التركة بسهولة! " + window.location.href)
+    : encodeURIComponent("حاسبة الزكاة الإسلامية - احسب زكاتك بسهولة! " + window.location.href);
+  window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+}
+
+function toggleChart(type, section) {
+  currentChartType[section] = type;
+  document.querySelectorAll(`#${section}-results .chart-toggle button`).forEach(btn => btn.classList.remove("active"));
+  document.querySelector(`#${section}-results .chart-toggle button[onclick="toggleChart('${type}', '${section}')"]`).classList.add("active");
+  section === 'mirath' ? calculateInheritance() : calculateZakat();
+}
+
+async function downloadChartsAsPDF(section) {
+  try {
+    // Check for required libraries
+    if (!window.html2canvas || !window.jspdf) {
+      console.log('html2canvas or jsPDF not loaded, attempting to load locally');
+      const loaded = await loadPDLibraries();
+      if (!loaded || !window.html2canvas || !window.jspdf) {
+        console.error('Failed to load html2canvas or jsPDF');
+        alert('تعذر تحميل مكتبات إنشاء PDF. تأكد من وجود assets/html2canvas.min.js و assets/jspdf.umd.min.js.');
+        return;
+      }
+    }
+
+    const canvas = document.getElementById(`${section}-sharesChart`);
+    if (!canvas || !canvas.getContext('2d')) {
+      alert('الرجاء إنشاء المخطط أولاً عن طريق إجراء الحساب');
+      return;
+    }
+
+    // Store original canvas state
+    const originalDisplay = canvas.style.display;
+    const originalPosition = canvas.style.position;
+    const originalLeft = canvas.style.left;
+
+    // Ensure canvas is visible for rendering
+    canvas.style.display = 'block';
+    canvas.style.position = 'absolute';
+    canvas.style.left = '-9999px';
+
+    // Helper function to wait for chart update
+    const waitForChartUpdate = () => new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Disable chart animations
+    const chart = window[section === 'mirath' ? 'mirathChart' : 'zakatChart'];
+    const originalAnimation = chart ? chart.options.animation : null;
+    if (chart) chart.options.animation = false;
+
+    // Capture pie chart
+    currentChartType[section] = 'pie';
+    section === 'mirath' ? calculateInheritance() : calculateZakat();
+    await waitForChartUpdate();
+    const pieCanvas = await html2canvas(canvas, { 
+      scale: 4,
+      backgroundColor: document.body.classList.contains('dark') ? '#0A1C2B' : '#F8F1E9',
+      useCORS: true,
+      logging: false
+    });
+    const pieImg = pieCanvas.toDataURL('image/png', 1.0);
+
+    // Capture bar chart
+    currentChartType[section] = 'bar';
+    section === 'mirath' ? calculateInheritance() : calculateZakat();
+    await waitForChartUpdate();
+    const barCanvas = await html2canvas(canvas, { 
+      scale: 4,
+      backgroundColor: document.body.classList.contains('dark') ? '#0A1C2B' : '#F8F1E9',
+      useCORS: true,
+      logging: false
+    });
+    const barImg = barCanvas.toDataURL('image/png', 1.0);
+
+    // Restore chart animations and canvas state
+    if (chart) chart.options.animation = originalAnimation;
+    canvas.style.display = originalDisplay;
+    canvas.style.position = originalPosition;
+    canvas.style.left = originalLeft;
+
+    // Initialize jsPDF in landscape orientation
+    const pdf = new window.jspdf.jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4',
+      putOnlyUsedFonts: true
+    });
+    pdf.setFont('Helvetica', 'normal');
+
+    // Page dimensions (A4 landscape: 297mm x 210mm)
+    const pageWidth = 297;
+    const pageHeight = 210;
+    const margin = 15;
+    const chartWidth = (pageWidth - 3 * margin) / 2; // Two charts side by side
+    const chartHeight = 100;
+
+    // Sanitize text function to ensure UTF-8 compliance
+    const sanitizeText = (text) => {
+      return text.replace(/[^-\uFFFF]/g, ''); // Remove non-UTF-8 characters
+    };
+
+    // Add charts
+    pdf.setFontSize(14);
+    pdf.setTextColor(45, 45, 45);
+    if (document.body.classList.contains('dark')) pdf.setTextColor(255, 255, 255);
+
+    // Pie chart (left)
+    pdf.text(sanitizeText('مخطط دائري'), pageWidth - margin, margin + 10, { align: 'right' });
+    pdf.addImage(pieImg, 'PNG', margin, margin + 15, chartWidth, chartHeight);
+
+    // Bar chart (right)
+    pdf.text(sanitizeText('مخطط أعمدة'), margin + chartWidth + 2 * margin, margin + 10, { align: 'right' });
+    pdf.addImage(barImg, 'PNG', margin + chartWidth + margin, margin + 15, chartWidth, chartHeight);
+
+    // Save the PDF
+    pdf.save(`${section}-charts.pdf`);
+  } catch (error) {
+    console.error('PDF Generation Error:', error);
+    alert('حدث خطأ أثناء إنشاء ملف PDF. تحقق من وحدة التحكم للحصول على التفاصيل.');
+  }
+}
+
+function saveCalculation(section) {
+  const formId = section === 'mirath' ? 'inheritance-form' : 'zakat-form';
+  const inputs = {};
+  document.querySelectorAll(`#${formId} input, #${formId} select`).forEach(input => {
+    inputs[input.id] = input.value;
+  });
+  inputs.results = document.getElementById(`${section}-results-text`).innerText;
+  const storageKey = section === 'mirath' ? 'savedMirathCalculations' : 'savedZakatCalculations';
+  const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  saved.push({ timestamp: new Date().toISOString(), data: inputs });
+  localStorage.setItem(storageKey, JSON.stringify(saved));
+  alert('تم حفظ الحساب!');
+  updateSavedCalculationsDropdown(section);
+}
+
+function loadCalculation(timestamp, section) {
+  const storageKey = section === 'mirath' ? 'savedMirathCalculations' : 'savedZakatCalculations';
+  const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  const calc = saved.find(c => c.timestamp === timestamp);
+  if (calc) {
+    Object.keys(calc.data).forEach(key => {
+      if (key !== 'results') {
+        const element = document.getElementById(key);
+        if (element) element.value = calc.data[key];
+      }
+    });
+    if (section === 'mirath') {
+      toggleHusbandField();
+      calculateInheritance();
+    } else {
+      calculateZakat();
+    }
+  }
+}
+
+function updateSavedCalculationsDropdown(section) {
+  const select = document.querySelector(`#${section}-results .results-actions select`);
+  select.innerHTML = '<option value="">اختر حساباً محفوظاً</option>';
+  const storageKey = section === 'mirath' ? 'savedMirathCalculations' : 'savedZakatCalculations';
+  const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  saved.forEach(c => {
+    const option = document.createElement('option');
+    option.value = c.timestamp;
+    option.textContent = new Date(c.timestamp).toLocaleString('ar-SA');
+    select.appendChild(option);
+  });
+}
+
+function showSection(step) {
+  document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.querySelector(`.form-section[data-step="${step}"]`).classList.add('active');
+  document.querySelector(`.step[data-step="${step}"]`).classList.add('active');
+}
+
+async function calculateInheritance() {
+  let estateValue = parseFloat(document.getElementById("estateValue").value);
+  let debts = parseFloat(document.getElementById("debts").value) || 0;
+  let bequests = parseFloat(document.getElementById("bequests").value) || 0;
+  
+  if (!validateInput("estateValue", "estateValue-error", "يرجى إدخال قيمة غير سالبة.", value => isNaN(value) || value < 0)) return;
+  if (!validateInput("debts", "debts-error", "يرجى إدخال قيمة غير سالبة.", value => isNaN(value) || value < 0)) return;
+  if (!validateInput("bequests", "bequests-error", "يرجى إدخال قيمة غير سالبة.", value => isNaN(value) || value < 0)) return;
+  if (!validateBequests()) return;
+  
+  let netEstate = estateValue - debts;
+  if (netEstate < 0) {
+    document.getElementById("mirath-results-text").innerText = "التركة سلبية بعد دفع الديون، لا يوجد شيء للتوزيع.";
+    document.getElementById("mirath-results").classList.add("show");
+    document.getElementById("mirath-sharesChart").style.display = "none";
+    return;
+  }
+  
+  let finalEstate = netEstate - bequests;
+  if (finalEstate <= 0) {
+    document.getElementById("mirath-results-text").innerText = "بعد دفع الديون والوصايا، لا يوجد تركة متبقية للتوزيع.";
+    document.getElementById("mirath-results").classList.add("show");
+    document.getElementById("mirath-sharesChart").style.display = "none";
+    return;
+  }
+
+  let gender = document.getElementById("deceased-gender").value;
+  let deathYear = document.getElementById("deathYear").value;
+  let wivesInput = parseInt(document.getElementById("wives").value) || 0;
+  let sons = parseInt(document.getElementById("sons").value) || 0;
+  let daughters = parseInt(document.getElementById("daughters").value) || 0;
+  let fatherAlive = document.getElementById("father").value === "yes";
+  let motherAlive = document.getElementById("mother").value === "yes";
+  let husbandAlive = gender === "female" ? document.getElementById("husband").value === "yes" : false;
+
+  if (!validateInput("wives", "wives-error", 
+    gender === "female" ? "لا يمكن إدخال زوجات لمتوفاة أنثى." : "يرجى إدخال عدد غير سالب.",
+    value => (gender === "female" && value > 0) || value < 0
+  )) return;
+
+  let numberOfSpouses = 0;
+  let isHusband = false;
+  if (gender === "male") {
+    numberOfSpouses = wivesInput;
+  } else if (gender === "female" && husbandAlive) {
+    numberOfSpouses = 1;
+    isHusband = true;
+  }
+
+  let hasChildren = sons > 0 || daughters > 0;
+  let hasHeirs = numberOfSpouses > 0 || hasChildren || fatherAlive || motherAlive;
+
+  if (!hasHeirs) {
+    document.getElementById("mirath-results-text").innerText = "لا يوجد ورثة محددين. التركة تذهب إلى بيت المال أو الخيرية.";
+    document.getElementById("mirath-results").classList.add("show");
+    document.getElementById("mirath-sharesChart").style.display = "none";
+    return;
+  }
+
+  let spousesShareFraction = isHusband ? (hasChildren ? 1/4 : 1/2) : (hasChildren ? 1/8 : 1/4);
+  let fatherShareFraction = hasChildren && fatherAlive ? 1/6 : (fatherAlive && !hasChildren ? 1/6 : 0);
+  let motherShareFraction = hasChildren ? (motherAlive ? 1/6 : 0) : (motherAlive ? 1/3 : 0);
+  let daughtersFixedShareFraction = (!sons && daughters > 0) ? (daughters === 1 ? 1/2 : 2/3) : 0;
+
+  let heirs = {};
+  if (numberOfSpouses > 0) heirs[isHusband ? "الزوج" : "الزوجات"] = { share: spousesShareFraction, number: numberOfSpouses };
+  if (fatherShareFraction > 0) heirs["الأب"] = { share: fatherShareFraction, number: 1 };
+  if (motherShareFraction > 0) heirs["الأم"] = { share: motherShareFraction, number: 1 };
+  if (daughtersFixedShareFraction > 0) heirs["البنات"] = { share: daughtersFixedShareFraction, number: daughters };
+
+  let totalFixed = 0;
+  for (let heir in heirs) totalFixed += heirs[heir].share;
+
+  if (totalFixed > 1) {
+    let ratio = 1 / totalFixed;
+    for (let heir in heirs) heirs[heir].share *= ratio;
+    totalFixed = 1;
+  }
+
+  let residue = 1 - totalFixed;
+  let asabaUnits = 0;
+  if (sons > 0) {
+    let sonMultiplier = deathYear === "before1990" ? 1 : 2;
+    asabaUnits = sons * sonMultiplier + daughters;
+    let asabaPerUnit = residue / asabaUnits;
+    heirs["الأبناء"] = { share: sons * sonMultiplier * asabaPerUnit, number: sons };
+    if (daughters > 0) {
+      heirs["البنات"] = heirs["البنات"] || { share: 0, number: daughters };
+      heirs["البنات"].share += daughters * asabaPerUnit;
+    }
+  } else if (daughters > 0 && !heirs["البنات"]) {
+    heirs["البنات"] = { share: residue, number: daughters };
+  } else if (!hasChildren && fatherAlive) {
+    heirs["الأب"] = heirs["الأب"] || { share: 0, number: 1 };
+    heirs["الأب"].share += residue;
+  } else if (totalFixed < 1 && totalFixed > 0) {
+    let scale = 1 / totalFixed;
+    for (let heir in heirs) heirs[heir].share *= scale;
+    totalFixed = 1;
+    residue = 0;
+  }
+
+  let results = "";
+  let details = [
+    `الخطوة 1: صافي التركة = ${estateValue.toFixed(2)} - ${debts.toFixed(2)} = ${netEstate.toFixed(2)} دينار`,
+    `الخطوة 2: التركة النهائية = ${netEstate.toFixed(2)} - ${bequests.toFixed(2)} = ${finalEstate.toFixed(2)} دينار`
+  ];
+  let chartData = {
+    labels: [],
+    datasets: [{
+      data: [],
+      backgroundColor: ['#1A3C34', '#D4A017', '#3B6978', '#F8F1E9', '#204051', '#C0392B'],
+      borderColor: ['#1A3C34', '#D4A017', '#3B6978', '#F8F1E9', '#204051', '#C0392B'],
+      borderWidth: 1,
+      shadowOffsetX: 2,
+      shadowOffsetY: 2,
+      shadowBlur: 5,
+      shadowColor: 'rgba(0, 0, 0, 0.2)'
+    }]
+  };
+
+  // Sanitize labels to prevent encoding issues
+  const sanitizeText = (text) => {
+    return text.replace(/[^-\uFFFF]/g, '');
+  };
+
+  if (numberOfSpouses > 0) {
+    details.push(`الخطوة 3: حصة ${isHusband ? "الزوج" : "الزوجات"} = ${spousesShareFraction.toFixed(4)} (${(spousesShareFraction * 100).toFixed(2)}%)`);
+  }
+  if (fatherShareFraction > 0) {
+    details.push(`الخطوة 4: حصة الأب = ${fatherShareFraction.toFixed(4)} (${(fatherShareFraction * 100).toFixed(2)}%)`);
+  }
+  if (motherShareFraction > 0) {
+    details.push(`الخطوة 5: حصة الأم = ${motherShareFraction.toFixed(4)} (${(motherShareFraction * 100).toFixed(2)}%)`);
+  }
+  if (daughtersFixedShareFraction > 0) {
+    details.push(`الخطوة 6: حصة البنات = ${daughtersFixedShareFraction.toFixed(4)} (${(daughtersFixedShareFraction * 100).toFixed(2)}%)`);
+  }
+  if (totalFixed > 1) {
+    details.push(`الخطوة 7: العول = تقليص الحصص بنسبة ${totalFixed.toFixed(4)} إلى 1`);
+  }
+  if (residue > 0 && asabaUnits > 0) {
+    details.push(`الخطوة 8: الباقي = ${residue.toFixed(4)} (${(residue * 100).toFixed(2)}%)، يوزع على ${asabaUnits} وحدات عصبة`);
+  } else if (residue > 0 && daughters > 0) {
+    details.push(`الخطوة 8: الباقي = ${residue.toFixed(4)} (${(residue * 100).toFixed(2)}%)، يوزع على البنات`);
+  } else if (residue > 0 && fatherAlive) {
+    details.push(`الخطوة 8: الباقي = ${residue.toFixed(4)} (${(residue * 100).toFixed(2)}%)، يوزع على الأب`);
+  } else if (totalFixed < 1 && totalFixed > 0) {
+    details.push(`الخطوة 7: الرد = توزيع الحصص بنسبة ${totalFixed.toFixed(4)} إلى 1`);
+  }
+
+  let detailStep = 9;
+  for (let group in heirs) {
+    let totalGroupShare = heirs[group].share;
+    let number = heirs[group].number;
+    let perPersonShare = totalGroupShare / number;
+    let amountPerPerson = finalEstate * perPersonShare;
+    results += `${group}: ${number} شخص، كل شخص يحصل على ${amountPerPerson.toFixed(2)} دينار\n`;
+    details.push(`الخطوة ${detailStep++}: ${group} = ${number} شخص، كل شخص يحصل على ${amountPerPerson.toFixed(2)} دينار (${(perPersonShare * 100).toFixed(2)}%)`);
+    
+    for (let i = 0; i < number; i++) {
+      chartData.labels.push(sanitizeText(`${group} ${i + 1}`));
+      chartData.datasets[0].data.push(amountPerPerson);
+    }
+  }
+
+  if (bequests > 0) {
+    results += `الوصايا: ${bequests.toFixed(2)} دينار\n`;
+    details.push(`الخطوة ${detailStep++}: الوصايا = ${bequests.toFixed(2)} دينار`);
+    chartData.labels.push(sanitizeText('الوصايا'));
+    chartData.datasets[0].data.push(bequests);
+  }
+
+  if (deathYear === "before1990") {
+    results += "\nملاحظة: الحسابات قبل 1990 تفترض توزيعاً متساوياً للأبناء والبنات.";
+    details.push(`ملاحظة: الحسابات قبل 1990 تفترض توزيعاً متساوياً للأبناء والبنات`);
+  }
+
+  document.getElementById("mirath-results-text").innerText = results;
+  document.getElementById("mirath-details-content").innerHTML = details.map(d => `<p>${d}</p>`).join('');
+  document.getElementById("mirath-results").classList.add("show");
+
+  console.log('Mirath Chart Data:', chartData);
+  console.log('Chart.js Available:', !!window.Chart);
+  console.log('ChartDataLabels Available:', !!window.ChartDataLabels);
+
+  let chartCanvas = document.getElementById("mirath-sharesChart");
+  console.log('Mirath Canvas:', chartCanvas);
+  chartCanvas.style.display = chartData.labels.length > 0 ? "block" : "none";
+
+  if (chartData.labels.length > 0) {
+    if (!window.Chart || !window.ChartDataLabels) {
+      console.log('Chart libraries missing, attempting to load locally');
+      const loaded = await loadChartLibraries();
+      if (!loaded || !window.Chart || !window.ChartDataLabels) {
+        console.error('Failed to load chart libraries even locally');
+        document.getElementById("mirath-results-text").innerText += "\nملاحظة: تعذر تحميل المخططات بسبب مشكلة في ملفات Chart.js. تأكد من وجود assets/chart.min.js و assets/chartjs-plugin-datalabels.min.js.";
+        alert('تعذر تحميل المخططات. تأكد من وجود ملفات Chart.js في مجلد assets. يمكنك متابعة عرض النتائج النصية.');
+        return;
+      }
+    }
+
+    if (window.mirathChart) {
+      window.mirathChart.destroy();
+    }
+
+    try {
+      Chart.register(ChartDataLabels);
+      window.mirathChart = new Chart(chartCanvas, {
+        type: currentChartType.mirath,
+        data: chartData,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          backgroundColor: document.body.classList.contains("dark") ? '#0A1C2B' : '#F8F1E9',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                font: { family: 'Tajawal', size: 16, weight: '500' },
+                color: document.body.classList.contains("dark") ? '#E0E0E0' : '#2D2D2D',
+                padding: 20,
+                boxWidth: 20
+              }
+            },
+            title: {
+              display: true,
+              text: sanitizeText('توزيع المواريث'),
+              font: { family: 'Amiri', size: 22, weight: 'bold' },
+              color: document.body.classList.contains("dark") ? '#FFFFFF' : '#1A3C34',
+              padding: { top: 10, bottom: 20 }
+            },
+            datalabels: {
+              color: '#FFFFFF',
+              font: { family: 'Tajawal', size: 14, weight: 'bold' },
+              formatter: (value, ctx) => {
+                let sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                let percentage = ((value / sum) * 100).toFixed(1);
+                return `${percentage}%`;
+              },
+              anchor: 'center',
+              align: 'center',
+              textShadowColor: 'rgba(0, 0, 0, 0.3)',
+              textShadowBlur: 3
+            },
+            tooltip: {
+              backgroundColor: document.body.classList.contains("dark") ? '#204051' : '#FFFFFF',
+              titleFont: { family: 'Amiri', size: 16 },
+              bodyFont: { family: 'Tajawal', size: 14 },
+              cornerRadius: 6,
+              boxPadding: 6,
+              callbacks: {
+                label: (context) => {
+                  let label = context.label || '';
+                  let value = context.parsed || 0;
+                  let sum = context.dataset.data.reduce((a, b) => a + b, 0);
+                  let percentage = ((value / sum) * 100).toFixed(1);
+                  return `${label}: ${value.toFixed(2)} دينار (${percentage}%)`;
+                }
+              }
+            }
+          },
+          animation: {
+            animateScale: true,
+            animateRotate: currentChartType.mirath === 'pie',
+            duration: 600,
+            easing: 'easeOutQuart'
+          },
+          elements: {
+            arc: {
+              borderWidth: 1,
+              borderColor: document.body.classList.contains("dark") ? '#0A1C2B' : '#F8F1E9'
+            },
+            bar: {
+              borderWidth: 1,
+              borderRadius: 4,
+              borderColor: document.body.classList.contains("dark") ? '#0A1C2B' : '#F8F1E9'
+            }
+          },
+          layout: {
+            padding: 20
+          },
+          scales: currentChartType.mirath === 'bar' ? {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: sanitizeText('المبلغ (دينار)'),
+                font: { family: 'Tajawal', size: 16 },
+                color: document.body.classList.contains("dark") ? '#E0E0E0' : '#2D2D2D'
+              },
+              ticks: {
+                font: { family: 'Tajawal', size: 14 },
+                color: document.body.classList.contains("dark") ? '#E0E0E0' : '#2D2D2D'
+              },
+              grid: {
+                color: document.body.classList.contains("dark") ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+              }
+            },
+            x: {
+              ticks: {
+                font: { family: 'Tajawal', size: 14 },
+                color: document.body.classList.contains("dark") ? '#E0E0E0' : '#2D2D2D',
+                maxRotation: 45,
+                minRotation: 45
+              },
+              grid: {
+                display: false
+              }
+            }
+          } : {}
+        }
+      });
+      chartCanvas.setAttribute('aria-label', `مخطط ${currentChartType.mirath === 'pie' ? 'دائري' : 'أعمدة'} يوضح توزيع التركة: ${chartData.labels.join(', ')}`);
+      console.log('Mirath Chart Rendered');
+    } catch (error) {
+      console.error('Mirath Chart Error:', error);
+      document.getElementById("mirath-results-text").innerText += "\nملاحظة: خطأ في إنشاء المخطط. يمكنك متابعة عرض النتائج النصية.";
+      alert('خطأ في إنشاء مخطط المواريث. تحقق من وحدة التحكم. يمكنك متابعة عرض النتائج النصية.');
+    }
+  }
+}
+
+async function calculateZakat() {
+  const goldPrice = 80;
+  const silverPrice = 1;
+  const nisab = 612;
+  const zakatRate = 0.025;
+
+  let cash = parseFloat(document.getElementById("cash").value) || 0;
+  let gold = parseFloat(document.getElementById("gold").value) || 0;
+  let silver = parseFloat(document.getElementById("silver").value) || 0;
+  let investments = parseFloat(document.getElementById("investments").value) || 0;
+  let debts = parseFloat(document.getElementById("zakat-debts").value) || 0;
+
+  let isValid = true;
+  ['cash', 'gold', 'silver', 'investments', 'zakat-debts'].forEach(field => {
+    if (!validateInput(field, `${field}-error`, "يرجى إدخال قيمة غير سالبة.", value => isNaN(value) || value < 0)) {
+      isValid = false;
+    }
+  });
+  if (!isValid) return;
+
+  let goldValue = gold * goldPrice;
+  let silverValue = silver * silverPrice;
+  let totalWealth = cash + goldValue + silverValue + investments - debts;
+
+  let zakatEligible = totalWealth >= nisab;
+  let zakatAmount = zakatEligible ? totalWealth * zakatRate : 0;
+
+  let results = zakatEligible
+    ? `إجمالي الثروة: ${totalWealth.toFixed(2)} دينار\nالزكاة المستحقة: ${zakatAmount.toFixed(2)} دينار`
+    : `إجمالي الثروة: ${totalWealth.toFixed(2)} دينار\nلا زكاة مستحقة (أقل من النصاب: ${nisab} دينار)`;
+
+  let details = [
+    `الخطوة 1: النقد = ${cash.toFixed(2)} دينار`,
+    `الخطوة 2: قيمة الذهب = ${gold.toFixed(2)} غرام × ${goldPrice} دينار/غرام = ${goldValue.toFixed(2)} دينار`,
+    `الخطوة 3: قيمة الفضة = ${silver.toFixed(2)} غرام × ${silverPrice} دينار/غرام = ${silverValue.toFixed(2)} دينار`,
+    `الخطوة 4: الاستثمارات = ${investments.toFixed(2)} دينار`,
+    `الخطوة 5: الديون = ${debts.toFixed(2)} دينار`,
+    `الخطوة 6: إجمالي الثروة = ${cash.toFixed(2)} + ${goldValue.toFixed(2)} + ${silverValue.toFixed(2)} + ${investments.toFixed(2)} - ${debts.toFixed(2)} = ${totalWealth.toFixed(2)} دينار`,
+    `الخطوة 7: النصاب = ${nisab} دينار`,
+    zakatEligible
+      ? `الخطوة 8: الزكاة = ${totalWealth.toFixed(2)} × 2.5% = ${zakatAmount.toFixed(2)} دينار`
+      : `الخطوة 8: لا زكاة مستحقة (الثروة أقل من النصاب)`
+  ];
+
+  let chartData = {
+    labels: zakatEligible ? ['الزكاة', 'الثروة المتبقية'] : ['إجمالي الثروة'],
+    datasets: [{
+      data: zakatEligible ? [zakatAmount, totalWealth - zakatAmount] : [totalWealth],
+      backgroundColor: ['#D4A017', '#1A3C34'],
+      borderColor: ['#D4A017', '#1A3C34'],
+      borderWidth: 1,
+      shadowOffsetX: 2,
+      shadowOffsetY: 2,
+      shadowBlur: 5,
+      shadowColor: 'rgba(0, 0, 0, 0.2)'
+    }]
+  };
+
+  // Sanitize labels to prevent encoding issues
+  chartData.labels = chartData.labels.map(label => sanitizeText(label));
+
+  document.getElementById("zakat-results-text").innerText = results;
+  document.getElementById("zakat-details-content").innerHTML = details.map(d => `<p>${d}</p>`).join('');
+  document.getElementById("zakat-results").classList.add("show");
+
+  console.log('Zakat Chart Data:', chartData);
+  console.log('Chart.js Available:', !!window.Chart);
+  console.log('ChartDataLabels Available:', !!window.ChartDataLabels);
+
+  let chartCanvas = document.getElementById("zakat-sharesChart");
+  console.log('Zakat Canvas:', chartCanvas);
+  chartCanvas.style.display = chartData.labels.length > 0 ? "block" : "none";
+
+  if (chartData.labels.length > 0) {
+    if (!window.Chart || !window.ChartDataLabels) {
+      console.log('Chart libraries missing, attempting to load locally');
+      const loaded = await loadChartLibraries();
+      if (!loaded || !window.Chart || !window.ChartDataLabels) {
+        console.error('Failed to load chart libraries even locally');
+        document.getElementById("zakat-results-text").innerText += "\nملاحظة: تعذر تحميل المخططات بسبب مشكلة في ملفات Chart.js. تأكد من وجود assets/chart.min.js و assets/chartjs-plugin-datalabels.min.js.";
+        alert('تعذر تحميل المخططات. تأكد من وجود ملفات Chart.js في مجلد assets. يمكنك متابعة عرض النتائج النصية.');
+        return;
+      }
+    }
+
+    if (window.zakatChart) {
+      window.zakatChart.destroy();
+    }
+
+    try {
+      Chart.register(ChartDataLabels);
+      window.zakatChart = new Chart(chartCanvas, {
+        type: currentChartType.zakat,
+        data: chartData,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          backgroundColor: document.body.classList.contains("dark") ? '#0A1C2B' : '#F8F1E9',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                font: { family: 'Tajawal', size: 16, weight: '500' },
+                color: document.body.classList.contains("dark") ? '#E0E0E0' : '#2D2D2D',
+                padding: 20,
+                boxWidth: 20
+              }
+            },
+            title: {
+              display: true,
+              text: sanitizeText('توزيع الزكاة'),
+              font: { family: 'Amiri', size: 22, weight: 'bold' },
+              color: document.body.classList.contains("dark") ? '#FFFFFF' : '#1A3C34',
+              padding: { top: 10, bottom: 20 }
+            },
+            datalabels: {
+              color: '#FFFFFF',
+              font: { family: 'Tajawal', size: 14, weight: 'bold' },
+              formatter: (value, ctx) => {
+                let sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                let percentage = ((value / sum) * 100).toFixed(1);
+                return `${percentage}%`;
+              },
+              anchor: 'center',
+              align: 'center',
+              textShadowColor: 'rgba(0, 0, 0, 0.3)',
+              textShadowBlur: 3
+            },
+            tooltip: {
+              backgroundColor: document.body.classList.contains("dark") ? '#204051' : '#FFFFFF',
+              titleFont: { family: 'Amiri', size: 16 },
+              bodyFont: { family: 'Tajawal', size: 14 },
+              cornerRadius: 6,
+              boxPadding: 6,
+              callbacks: {
+                label: (context) => {
+                  let label = context.label || '';
+                  let value = context.parsed || 0;
+                  let sum = context.dataset.data.reduce((a, b) => a + b, 0);
+                  let percentage = ((value / sum) * 100).toFixed(1);
+                  return `${label}: ${value.toFixed(2)} دينار (${percentage}%)`;
+                }
+              }
+            }
+          },
+          animation: {
+            animateScale: true,
+            animateRotate: currentChartType.zakat === 'pie',
+            duration: 600,
+            easing: 'easeOutQuart'
+          },
+          elements: {
+            arc: {
+              borderWidth: 1,
+              borderColor: document.body.classList.contains("dark") ? '#0A1C2B' : '#F8F1E9'
+            },
+            bar: {
+              borderWidth: 1,
+              borderRadius: 4,
+              borderColor: document.body.classList.contains("dark") ? '#0A1C2B' : '#F8F1E9'
+            }
+          },
+          layout: {
+            padding: 20
+          },
+          scales: currentChartType.zakat === 'bar' ? {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: sanitizeText('المبلغ (دينار)'),
+                font: { family: 'Tajawal', size: 16 },
+                color: document.body.classList.contains("dark") ? '#E0E0E0' : '#2D2D2D'
+              },
+              ticks: {
+                font: { family: 'Tajawal', size: 14 },
+                color: document.body.classList.contains("dark") ? '#E0E0E0' : '#2D2D2D'
+              },
+              grid: {
+                color: document.body.classList.contains("dark") ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+              }
+            },
+            x: {
+              ticks: {
+                font: { family: 'Tajawal', size: 14 },
+                color: document.body.classList.contains("dark") ? '#E0E0E0' : '#2D2D2D',
+                maxRotation: 45,
+                minRotation: 45
+              },
+              grid: {
+                display: false
+              }
+            }
+          } : {}
+        }
+      });
+      chartCanvas.setAttribute('aria-label', `مخطط ${currentChartType.zakat === 'pie' ? 'دائري' : 'أعمدة'} يوضح توزيع الزكاة: ${chartData.labels.join(', ')}`);
+      console.log('Zakat Chart Rendered');
+    } catch (error) {
+      console.error('Zakat Chart Error:', error);
+      document.getElementById("zakat-results-text").innerText += "\nملاحظة: خطأ في إنشاء المخطط. يمكنك متابعة عرض النتائج النصية.";
+      alert('خطأ في إنشاء مخطط الزكاة. تحقق من وحدة التحكم. يمكنك متابعة عرض النتائج النصية.');
+    }
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const savedTheme = localStorage.getItem("theme") || "islamic";
+  setTheme(savedTheme);
+  setupValidation();
+  toggleHusbandField();
+  if (!localStorage.getItem("onboardingSeen")) {
+    showOnboarding();
+  }
+  document.querySelectorAll('.step').forEach(step => {
+    step.addEventListener('click', () => showSection(step.dataset.step));
+    step.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        showSection(step.dataset.step);
+      }
+    });
+  });
+
+  // Log initial library status
+  console.log('Initial Chart.js Status:', !!window.Chart);
+  console.log('Initial ChartDataLabels Status:', !!window.ChartDataLabels);
+  console.log('Initial html2canvas Status:', !!window.html2canvas);
+  console.log('Initial jsPDF Status:', !!window.jspdf);
+});
+
+
+
+
+
+
+html:
+
+
+
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>حاسبة المواريث والزكاة الإسلامية</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body class="islamic">
+  <div class="hero">
+    <img src="assets/hero-image.jpg" alt="Islamic Architecture" class="hero-image" loading="lazy">
+    <div class="hero-content">
+      <h1>حاسبة المواريث والزكاة</h1>
+      <p>احسب توزيع التركة والزكاة وفق الشريعة الإسلامية</p>
+      <button class="cta-button" onclick="scrollToCalculator()">ابدأ الآن</button>
+    </div>
+  </div>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>القائمة</h2>
+      <button class="close-sidebar" onclick="toggleSidebar()"><i class="fas fa-times"></i></button>
+    </div>
+    <nav>
+      <a href="#" onclick="switchSection('mirath')" class="active">حاسبة المواريث</a>
+      <a href="#" onclick="switchSection('zakat')">حاسبة الزكاة</a>
+      <a href="#" onclick="showOnboarding()">جولة تعريفية</a>
+      <a href="#feedback-section">ملاحظاتكم</a>
+    </nav>
+  </div>
+  <div class="main-content">
+    <header>
+      <button class="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <div class="theme-switcher">
+        <button onclick="setTheme('light')"><i class="fas fa-sun"></i></button>
+        <button onclick="setTheme('dark')"><i class="fas fa-moon"></i></button>
+        <button onclick="setTheme('islamic')"><i class="fas fa-star-and-crescent"></i></button>
+      </div>
+    </header>
+    <div class="container" id="calculator">
+      <nav class="section-tabs" role="tablist">
+        <button role="tab" aria-selected="true" class="tab active" onclick="switchSection('mirath')">حاسبة المواريث</button>
+        <button role="tab" aria-selected="false" class="tab" onclick="switchSection('zakat')">حاسبة الزكاة</button>
+      </nav>
+      <div id="mirath-section" class="section active">
+        <div class="disclaimer grid-card">
+          <p>تنبيه: هذه الأداة توفر حسابات مبدئية. للحالات المعقدة، استشر عالمًا شرعيًا.</p>
+        </div>
+        <form id="inheritance-form" class="grid-card">
+          <div class="progress-stepper">
+            <div class="step active" data-step="1" tabindex="0" role="button" aria-label="الخطوة 1: التركة">1. التركة</div>
+            <div class="step" data-step="2" tabindex="0" role="button" aria-label="الخطوة 2: المتوفى">2. المتوفى</div>
+            <div class="step" data-step="3" tabindex="0" role="button" aria-label="الخطوة 3: الورثة">3. الورثة</div>
+          </div>
+          <div class="form-section active" data-step="1">
+            <h2>معلومات التركة</h2>
+            <div class="input-group">
+              <label for="estateValue">قيمة التركة (دينار أردني)<span class="tooltip" data-tooltip="أدخل إجمالي قيمة التركة قبل الديون أو الوصايا">ⓘ</span></label>
+              <input type="number" id="estateValue" min="0" aria-describedby="estateValue-error">
+              <span class="error-message" id="estateValue-error"></span>
+            </div>
+            <div class="input-group">
+              <label for="debts">الديون (دينار أردني)<span class="tooltip" data-tooltip="أدخل إجمالي الديون المستحقة على التركة">ⓘ</span></label>
+              <input type="number" id="debts" min="0" aria-describedby="debts-error">
+              <span class="error-message" id="debts-error"></span>
+            </div>
+            <div class="input-group">
+              <label for="bequests">الوصايا (دينار أردني)<span class="tooltip" data-tooltip="الوصايا لا يمكن أن تتجاوز ثلث التركة بعد الديون">ⓘ</span></label>
+              <input type="number" id="bequests" min="0" aria-describedby="bequests-error">
+              <span class="error-message" id="bequests-error"></span>
+            </div>
+          </div>
+          <div class="form-section" data-step="2">
+            <h2>معلومات المتوفى</h2>
+            <div class="input-group">
+              <label for="deceased-gender">جنس المتوفى</label>
+              <select id="deceased-gender" onchange="toggleHusbandField()">
+                <option value="male">ذكر</option>
+                <option value="female">أنثى</option>
+              </select>
+            </div>
+            <div id="husband-field" style="display: none;">
+              <div class="input-group">
+                <label for="husband" id="husband-label">هل يوجد زوج؟</label>
+                <select id="husband">
+                  <option value="yes">نعم</option>
+                  <option value="no">لا</option>
+                </select>
+              </div>
+            </div>
+            <div class="input-group">
+              <label for="deathYear">تاريخ الوفاة</label>
+              <select id="deathYear">
+                <option value="before1990">قبل 1990</option>
+                <option value="after1990">1990 أو بعد</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-section" data-step="3">
+            <h2>الورثة</h2>
+            <div class="input-group">
+              <label for="wives">عدد الزوجات<span class="tooltip" data-tooltip="أدخل عدد الزوجات للمتوفى (إذا كان ذكرًا)">ⓘ</span></label>
+              <input type="number" id="wives" min="0" value="0" aria-describedby="wives-error">
+              <span class="error-message" id="wives-error"></span>
+            </div>
+            <div class="input-group">
+              <label for="sons">عدد الأبناء الذكور</label>
+              <input type="number" id="sons" min="0" value="0">
+            </div>
+            <div class="input-group">
+              <label for="daughters">عدد البنات</label>
+              <input type="number" id="daughters" min="0" value="0">
+            </div>
+            <div class="input-group">
+              <label for="father">هل الأب على قيد الحياة؟</label>
+              <select id="father">
+                <option value="yes">نعم</option>
+                <option value="no">لا</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label for="mother">هل الأم على قيد الحياة؟</label>
+              <select id="mother">
+                <option value="yes">نعم</option>
+                <option value="no">لا</option>
+              </select>
+            </div>
+          </div>
+          <button type="button" onclick="calculateInheritance()">احسب المواريث</button>
+        </form>
+        <div id="mirath-results" class="grid-card">
+          <div id="mirath-results-text"></div>
+          <table id="mirath-results-table" style="display: none;">
+            <thead>
+              <tr>
+                <th>الوريث</th>
+                <th>العدد</th>
+                <th>الحصة (دينار)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="results-actions">
+            <button onclick="saveCalculation('mirath')">حفظ الحساب</button>
+            <select onchange="loadCalculation(this.value, 'mirath')">
+              <option value="">اختر حساباً محفوظاً</option>
+            </select>
+          </div>
+          <div class="share-buttons">
+            <button class="share-button whatsapp" onclick="shareOnWhatsApp('mirath')"><i class="fab fa-whatsapp"></i> مشاركة عبر واتساب</button>
+            <button class="share-button twitter" onclick="shareOnTwitter('mirath')"><i class="fab fa-twitter"></i> مشاركة عبر تويتر</button>
+          </div>
+          <details id="mirath-calculation-details">
+            <summary>تفاصيل الحساب</summary>
+            <div id="mirath-details-content"></div>
+          </details>
+          <div class="chart-toggle">
+            <button class="active" onclick="toggleChart('pie', 'mirath')">مخطط دائري</button>
+            <button onclick="toggleChart('bar', 'mirath')">مخطط أعمدة</button>
+            <button onclick="downloadChartsAsPDF('mirath')" aria-label="تحميل المخططات كملف PDF">تحميل المخططات كـ PDF</button>
+          </div>
+          <canvas id="mirath-sharesChart" style="display: none;"></canvas>
+        </div>
+      </div>
+      <div id="zakat-section" class="section">
+        <div class="disclaimer grid-card">
+          <p>تنبيه: هذه الأداة توفر حسابات مبدئية. للحالات المعقدة، استشر عالمًا شرعيًا.</p>
+        </div>
+        <form id="zakat-form" class="grid-card">
+          <h2>معلومات الثروة</h2>
+          <div class="input-group">
+            <label for="cash">النقد (دينار أردني)<span class="tooltip" data-tooltip="أدخل إجمالي النقد المتوفر">ⓘ</span></label>
+            <input type="number" id="cash" min="0" aria-describedby="cash-error">
+            <span class="error-message" id="cash-error"></span>
+          </div>
+          <div class="input-group">
+            <label for="gold">الذهب (غرام)<span class="tooltip" data-tooltip="أدخل وزن الذهب بالغرامات">ⓘ</span></label>
+            <input type="number" id="gold" min="0" aria-describedby="gold-error">
+            <span class="error-message" id="gold-error"></span>
+          </div>
+          <div class="input-group">
+            <label for="silver">الفضة (غرام)<span class="tooltip" data-tooltip="أدخل وزن الفضة بالغرامات">ⓘ</span></label>
+            <input type="number" id="silver" min="0" aria-describedby="silver-error">
+            <span class="error-message" id="silver-error"></span>
+          </div>
+          <div class="input-group">
+            <label for="investments">الاستثمارات (دينار أردني)<span class="tooltip" data-tooltip="أدخل قيمة الاستثمارات الخاضعة للزكاة">ⓘ</span></label>
+            <input type="number" id="investments" min="0" aria-describedby="investments-error">
+            <span class="error-message" id="investments-error"></span>
+          </div>
+          <div class="input-group">
+            <label for="zakat-debts">الديون (دينار أردني)<span class="tooltip" data-tooltip="أدخل الديون المستحقة التي تقلل من الثروة">ⓘ</span></label>
+            <input type="number" id="zakat-debts" min="0" aria-describedby="zakat-debts-error">
+            <span class="error-message" id="zakat-debts-error"></span>
+          </div>
+          <button type="button" onclick="calculateZakat()">احسب الزكاة</button>
+        </form>
+        <div id="zakat-results" class="grid-card">
+          <div id="zakat-results-text"></div>
+          <table id="zakat-results-table" style="display: none;">
+            <thead>
+              <tr>
+                <th>البند</th>
+                <th>المبلغ (دينار)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="results-actions">
+            <button onclick="saveCalculation('zakat')">حفظ الحساب</button>
+            <select onchange="loadCalculation(this.value, 'zakat')">
+              <option value="">اختر حساباً محفوظاً</option>
+            </select>
+          </div>
+          <div class="share-buttons">
+            <button class="share-button whatsapp" onclick="shareOnWhatsApp('zakat')"><i class="fab fa-whatsapp"></i> مشاركة عبر واتساب</button>
+            <button class="share-button twitter" onclick="shareOnTwitter('zakat')"><i class="fab fa-twitter"></i> مشاركة عبر تويتر</button>
+          </div>
+          <details id="zakat-calculation-details">
+            <summary>تفاصيل الحساب</summary>
+            <div id="zakat-details-content"></div>
+          </details>
+          <div class="chart-toggle">
+            <button class="active" onclick="toggleChart('pie', 'zakat')">مخطط دائري</button>
+            <button onclick="toggleChart('bar', 'zakat')">مخطط أعمدة</button>
+            <button onclick="downloadChartsAsPDF('zakat')" aria-label="تحميل المخططات كملف PDF">تحميل المخططات كـ PDF</button>
+          </div>
+          <canvas id="zakat-sharesChart" style="display: none;"></canvas>
+        </div>
+      </div>
+      <div class="more-info grid-card">
+        <p>لمزيد من المعلومات، زر <a href="https://www.islamweb.net">إسلام ويب</a>.</p>
+      </div>
+      <div class="feedback-section grid-card" id="feedback-section">
+        <h2>ملاحظاتكم</h2>
+        <form id="feedback-form" action="https://formspree.io/f/your-endpoint" method="POST">
+          <div class="input-group">
+            <label for="feedback-name">الاسم</label>
+            <input type="text" id="feedback-name" name="name">
+          </div>
+          <div class="input-group">
+            <label for="feedback-email">البريد الإلكتروني</label>
+            <input type="email" id="feedback-email" name="email">
+          </div>
+          <div class="input-group">
+            <label for="feedback-message">الرسالة</label>
+            <textarea id="feedback-message" name="message"></textarea>
+          </div>
+          <button type="submit">إرسال</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="onboarding-modal">
+    <div class="modal-content grid-card">
+      <span class="close-modal" onclick="closeOnboarding()">×</span>
+      <h2>مرحبًا بكم</h2>
+      <div class="carousel">
+        <div class="carousel-item active">
+          <h3>اختر القسم</h3>
+          <p>استخدم الألسنة للتبديل بين المواريث والزكاة.</p>
+        </div>
+        <div class="carousel-item">
+          <h3>أدخل بيانات المواريث</h3>
+          <p>حدد التركة، الديون، والورثة بدقة.</p>
+        </div>
+        <div class="carousel-item">
+          <h3>أدخل بيانات الزكاة</h3>
+          <p>أدخل النقد، الذهب، والاستثمارات.</p>
+        </div>
+        <div class="carousel-item">
+          <h3>راجع النتائج</h3>
+          <p>عرض النتائج مع مخططات وحفظ/مشاركة.</p>
+        </div>
+      </div>
+      <button class="carousel-nav prev" onclick="changeCarousel(-1)">❯</button>
+      <button class="carousel-nav next" onclick="changeCarousel(1)">❮</button>
+      <button class="modal-button" onclick="closeOnboarding()">ابدأ الآن</button>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="jp3.js"></script>
+</body>
+</html>
+
+
+
+
+
+css:
+
+
+
+:root {
+  --primary-color: #1A3C34;
+  --secondary-color: #D4A017;
+  --accent-color: #0A1C2B;
+  --background-color: #F8F1E9;
+  --text-color: #2D2D2D;
+  --label-color: #4A4A4A;
+  --border-color: rgba(255, 255, 255, 0.3);
+  --error-color: #C0392B;
+  --light-bg: #F8F1E9;
+  --light-text: #2D2D2D;
+  --dark-bg: #0A1C2B;
+  --dark-text: #FFFFFF;
+  --islamic-bg: #1A3C34;
+  --islamic-text: #F8F1E9;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Tajawal', sans-serif;
+  direction: rtl;
+  background: var(--background-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('assets/arabesque.svg') repeat;
+  opacity: 0.1;
+  z-index: -1;
+}
+
+body.light {
+  --background-color: var(--light-bg);
+  --text-color: var(--light-text);
+}
+
+body.dark {
+  --background-color: var(--dark-bg);
+  --text-color: var(--dark-text);
+}
+
+body.islamic {
+  --background-color: var(--islamic-bg);
+  --text-color: var(--islamic-text);
+}
+
+.hero {
+  position: relative;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+  opacity: 0.8;
+}
+
+.hero-content {
+  color: #FFFFFF;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.hero-content h1 {
+  font-family: 'Amiri', serif;
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.hero-content p {
+  font-size: 20px;
+  margin-bottom: 30px;
+}
+
+.cta-button {
+  background: var(--secondary-color);
+  color: #FFFFFF;
+  padding: 16px 32px;
+  font-size: 20px;
+  border: none;
+  clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
+  cursor: pointer;
+  transition: transform 0.3s linear, box-shadow 0.3s linear;
+  position: relative;
+}
+
+.cta-button::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px solid var(--primary-color);
+  clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
+  opacity: 0;
+  transition: opacity 0.3s linear;
+}
+
+.cta-button:hover::before {
+  opacity: 1;
+}
+
+.cta-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: -300px;
+  width: 300px;
+  height: 100%;
+  background: var(--primary-color);
+  color: var(--islamic-text);
+  transition: right 0.3s linear;
+  z-index: 1000;
+}
+
+.sidebar.active {
+  right: 0;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-header h2 {
+  font-family: 'Amiri', serif;
+  font-size: 24px;
+}
+
+.close-sidebar {
+  background: none;
+  border: none;
+  color: var(--islamic-text);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.sidebar nav a {
+  color: var(--islamic-text);
+  text-decoration: none;
+  font-size: 18px;
+  padding: 10px;
+  margin: 5px 0;
+  display: block;
+  transition: background 0.3s linear;
+}
+
+.sidebar nav a.active, .sidebar nav a:hover {
+  background: var(--secondary-color);
+}
+
+.main-content {
+  margin-right: 0;
+  transition: margin-right 0.3s linear;
+}
+
+.main-content.sidebar-active {
+  margin-right: 300px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: var(--primary-color);
+  color: var(--islamic-text);
+  position: sticky;
+  top: 0;
+  z-index: 900;
+}
+
+.theme-switcher button {
+  background: none;
+  border: none;
+  color: var(--islamic-text);
+  font-size: 20px;
+  margin-left: 10px;
+  cursor: pointer;
+  transition: transform 0.3s linear;
+}
+
+.theme-switcher button:hover {
+  transform: scale(1.1);
+}
+
+.container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 0 20px;
+  display: grid;
+  gap: 20px;
+}
+
+.section-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tab {
+  background: var(--accent-color);
+  color: var(--islamic-text);
+  padding: 12px 24px;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
+  transition: background 0.3s linear;
+}
+
+.tab.active, .tab:hover {
+  background: var(--secondary-color);
+}
+
+.tab:focus {
+  outline: 2px solid var(--secondary-color);
+}
+
+.section {
+  display: none;
+}
+
+.section.active {
+  display: block;
+}
+
+.grid-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+  animation: slideIn 0.5s linear;
+}
+
+.grid-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--secondary-color);
+  transition: all 0.3s linear;
+  clip-path: polygon(0 0, 100% 0, 100% 10%, 10% 100%, 0 100%);
+  opacity: 0;
+}
+
+.grid-card:hover::before {
+  opacity: 1;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0);
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.progress-stepper {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.step {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  background: var(--accent-color);
+  color: var(--islamic-text);
+  clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
+  transition: background 0.3s linear;
+  cursor: pointer;
+}
+
+.step:focus {
+  outline: 2px solid var(--secondary-color);
+}
+
+.step.active {
+  background: var(--secondary-color);
+}
+
+h2 {
+  font-family: 'Amiri', serif;
+  font-size: 28px;
+  color: var(--text-color);
+  margin-bottom: 15px;
+  border-bottom: 2px solid var(--secondary-color);
+  padding-bottom: 5px;
+}
+
+.disclaimer {
+  text-align: center;
+  font-size: 16px;
+}
+
+#inheritance-form, #zakat-form, #feedback-form {
+  display: grid;
+  gap: 20px;
+}
+
+label {
+  font-size: 18px;
+  color: var(--label-color);
+  font-weight: 500;
+  margin-bottom: 8px;
+  transition: color 0.3s linear, transform 0.3s linear;
+}
+
+label:hover {
+  color: var(--secondary-color);
+  transform: scale(1.02);
+}
+
+.tooltip {
+  cursor: help;
+  color: var(--secondary-color);
+  margin-right: 5px;
+  position: relative;
+}
+
+.tooltip:hover::after, .tooltip:focus::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--primary-color);
+  color: var(--islamic-text);
+  padding: 8px;
+  font-size: 14px;
+  width: 200px;
+  z-index: 10;
+  clip-path: polygon(0 0, 100% 0, 100% 90%, 90% 100%, 0 100%);
+}
+
+.input-group {
+  position: relative;
+}
+
+input[type="number"], input[type="text"], input[type="email"], select, textarea {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--text-color);
+  transition: all 0.3s linear;
+  position: relative;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border: none;
+}
+
+input:focus::before, select:focus::before, textarea:focus::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px solid var(--secondary-color);
+  clip-path: polygon(10% 0%, 50% 0%, 90% 0%, 100% 50%, 90% 100%, 50% 100%, 10% 100%, 0% 50%);
+  z-index: 1;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+input.error, select.error {
+  border-color: var(--error-color);
+}
+
+.error-message {
+  color: var(--error-color);
+  font-size: 14px;
+  margin-top: 5px;
+  display: none;
+}
+
+.error-message.show {
+  display: block;
+}
+
+button {
+  background: var(--primary-color);
+  color: var(--islamic-text);
+  padding: 14px 24px;
+  border: none;
+  font-size: 18px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.3s linear, box-shadow 0.3s linear;
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+button:hover {
+  transform: scale(1.05);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.chart-toggle {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.chart-toggle button {
+  background: var(--accent-color);
+  color: var(--islamic-text);
+  padding: 12px 24px;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
+  transition: background 0.3s linear, transform 0.3s linear;
+}
+
+.chart-toggle button.active, .chart-toggle button:hover {
+  background: var(--secondary-color);
+  transform: scale(1.05);
+}
+
+.chart-toggle button:focus {
+  outline: 2px solid var(--secondary-color);
+}
+
+.results-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.results-actions select {
+  padding: 10px;
+  font-size: 16px;
+  background: var(--accent-color);
+  color: var(--islamic-text);
+  border: 1px solid var(--border-color);
+}
+
+.share-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.share-button {
+  background: #25D366;
+  padding: 10px 20px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.share-button.twitter {
+  background: #1DA1F2;
+}
+
+.share-button:hover {
+  background: #20BA5A;
+}
+
+.share-button.twitter:hover {
+  background: #1991DB;
+}
+
+#mirath-results, #zakat-results {
+  margin-top: 30px;
+  font-size: 16px;
+}
+
+#mirath-results.show, #zakat-results.show {
+  animation: fadeIn 0.5s linear;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+#mirath-calculation-details summary, #zakat-calculation-details summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--secondary-color);
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#mirath-calculation-details div, #zakat-calculation-details div {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  margin-top: 5px;
+}
+
+#mirath-sharesChart, #zakat-sharesChart {
+  max-width: 400px;
+  margin: 20px auto;
+}
+
+#mirath-results table, #zakat-results table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+#mirath-results table th, #mirath-results table td, #zakat-results table th, #zakat-results table td {
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  text-align: right;
+}
+
+#mirath-results table th, #zakat-results table th {
+  background: var(--primary-color);
+  color: var(--islamic-text);
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+#mirath-results table tr:nth-child(even), #zakat-results table tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#mirath-results table tr:nth-child(odd), #zakat-results table tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.more-info a {
+  color: var(--secondary-color);
+  text-decoration: none;
+}
+
+.more-info a:hover {
+  text-decoration: underline;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  max-width: 600px;
+  width: 90%;
+  padding: 30px;
+  text-align: center;
+  position: relative;
+  overflow-y: auto;
+  max-height: 90vh;
+}
+
+.modal-content h2 {
+  font-family: 'Amiri', serif;
+  font-size: 28px;
+}
+
+.carousel-item {
+  display: none;
+  transition: opacity 0.3s linear;
+}
+
+.carousel-item.active {
+  display: block;
+  opacity: 1;
+}
+
+.carousel-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--primary-color);
+  color: var(--islamic-text);
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.carousel-nav.prev { left: 10px; }
+.carousel-nav.next { right: 10px; }
+
+.close-modal {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-color);
+}
+
+.modal-button {
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .hero-content h1 { font-size: 32px; }
+  .hero-content p { font-size: 16px; }
+  .cta-button { font-size: 16px; padding: 12px 24px; }
+  .sidebar { width: 100%; right: -100%; }
+  .main-content.sidebar-active { margin-right: 0; }
+  .container { padding: 0 10px; }
+  h2 { font-size: 22px; }
+  input, select, textarea, button { font-size: 14px; padding: 12px; }
+  #mirath-sharesChart, #zakat-sharesChart { max-width: 300px; }
+  #mirath-results table th, #mirath-results table td, #zakat-results table th, #zakat-results table td { padding: 8px; font-size: 14px; }
+  .progress-stepper { flex-direction: column; gap: 10px; }
+  .step { clip-path: none; }
+  .section-tabs { flex-direction: column; }
+  .tab { clip-path: none; }
+  .chart-toggle button { clip-path: none; }
+  .tooltip::after { width: 150px; }
+}
+
+@media (min-width: 769px) {
+  .sidebar { right: 0; width: 250px; }
+  .main-content { margin-right: 250px; }
+  .menu-toggle, .close-sidebar { display: none; }
+}

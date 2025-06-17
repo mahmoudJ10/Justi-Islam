@@ -1,0 +1,915 @@
+:root {
+  --primary-color: #1a3c34;
+  --secondary-color: #d4a017;
+  --accent-color: #0a1c2b;
+  --background-color: #f8f1e9;
+  --text-color: #2d2d2d;
+  --label-color: #4a4a4a;
+  --border-color: rgba(255, 255, 255, 0.3);
+  --error-color: #c0392b;
+  --neutral-color: #6b7280;
+  --light-bg: #f8f1e9;
+  --light-text: #2d2d2d;
+  --dark-bg: #0a1c2b;
+  --dark-text: #ffffff;
+  --islamic-bg: #1a3c34;
+  --islamic-text: #f8f1e9;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Tajawal', sans-serif;
+  direction: rtl;
+  background: var(--background-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('assets/arabesque.svg') repeat;
+  opacity: 0.1;
+  z-index: -1;
+}
+
+body.light {
+  --background-color: var(--light-bg);
+  --text-color: var(--light-text);
+}
+
+body.dark {
+  --background-color: var(--dark-bg);
+  --text-color: var(--dark-text);
+}
+
+body.islamic {
+  --background-color: var(--islamic-bg);
+  --text-color: var(--islamic-text);
+}
+
+.hero {
+  position: relative;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+  background: var(--primary-color); /* Fallback if image is missing */
+}
+
+.hero-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+  opacity: 0.8;
+}
+
+.hero-content {
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.hero-content h1 {
+  font-family: 'Amiri', serif;
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.hero-content p {
+  font-size: 20px;
+  margin-bottom: 30px;
+}
+
+.cta-button {
+  background: var(--secondary-color);
+  color: #ffffff;
+  padding: 16px 32px;
+  font-size: 20px;
+  border: none;
+  clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
+  cursor: pointer;
+  transition: transform 0.3s linear, box-shadow 0.3s linear;
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.cta-button::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px solid var(--primary-color);
+  clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
+  opacity: 0;
+  transition: opacity 0.3s linear;
+}
+
+.cta-button:hover::before {
+  opacity: 1;
+}
+
+.cta-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: -300px;
+  width: 300px;
+  height: 100%;
+  background: var(--primary-color);
+  color: var(--islamic-text);
+  transition: right 0.3s linear;
+  z-index: 1000;
+}
+
+.sidebar.active {
+  right: 0;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-header h2 {
+  font-family: 'Amiri', serif;
+  font-size: 24px;
+}
+
+.close-sidebar {
+  background: none;
+  border: none;
+  color: var(--islamic-text);
+  font-size: 20px;
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.sidebar nav a {
+  color: var(--islamic-text);
+  text-decoration: none;
+  font-size: 18px;
+  padding: 10px;
+  margin: 5px 0;
+  display: block;
+  transition: background 0.3s linear;
+}
+
+.sidebar nav a.active,
+.sidebar nav a:hover {
+  background: var(--secondary-color);
+}
+
+.main-content {
+  margin-right: 0;
+  transition: margin-right 0.3s linear;
+}
+
+.main-content.sidebar-active {
+  margin-right: 300px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: var(--primary-color);
+  color: var(--islamic-text);
+  position: sticky;
+  top: 0;
+  z-index: 900;
+}
+
+.theme-switcher button {
+  background: none;
+  border: none;
+  color: var(--islamic-text);
+  font-size: 20px;
+  margin-left: 10px;
+  cursor: pointer;
+  transition: transform 0.3s linear;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.theme-switcher button:hover {
+  transform: scale(1.1);
+}
+
+.container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 0 20px;
+  display: grid;
+  gap: 20px;
+}
+
+.section-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tab {
+  background: var(--accent-color);
+  color: var(--islamic-text);
+  padding: 12px 24px;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
+  transition: background 0.3s linear;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.tab.active,
+.tab:hover {
+  background: var(--secondary-color);
+}
+
+.tab:focus {
+  outline: 2px solid var(--secondary-color);
+}
+
+.section {
+  display: none;
+}
+
+.section.active {
+  display: block;
+}
+
+.grid-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+  animation: slideIn 0.5s linear;
+}
+
+.grid-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--secondary-color);
+  transition: all 0.3s linear;
+  clip-path: polygon(0 0, 100% 0, 100% 10%, 10% 100%, 0 100%);
+  opacity: 0;
+}
+
+.grid-card:hover::before {
+  opacity: 1;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.progress-stepper {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.step {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  background: var(--accent-color);
+  color: var(--islamic-text);
+  clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
+  transition: background 0.3s linear;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.step:focus {
+  outline: 2px solid var(--secondary-color);
+}
+
+.step.active {
+  background: var(--secondary-color);
+}
+
+h2 {
+  font-family: 'Amiri', serif;
+  font-size: 28px;
+  color: var(--text-color);
+  margin-bottom: 15px;
+  border-bottom: 2px solid var(--secondary-color);
+  padding-bottom: 5px;
+}
+
+.disclaimer {
+  text-align: center;
+  font-size: 16px;
+}
+
+#inheritance-form,
+#zakat-form,
+#feedback-form {
+  display: grid;
+  gap: 20px;
+}
+
+.form-section[data-step="2"] {
+  padding: 20px 0; /* Ensure spacing after deathYear removal */
+}
+
+.form-navigation {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.form-navigation button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--primary-color);
+  color: var(--islamic-text);
+  min-width: 44px;
+  min-height: 44px;
+  clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
+  transition: background 0.3s linear, transform 0.3s linear;
+}
+
+.form-navigation button i {
+  font-size: 16px;
+}
+
+.form-navigation button:hover {
+  background: var(--secondary-color);
+  transform: scale(1.05);
+}
+
+.form-navigation button:focus {
+  outline: 2px solid var(--secondary-color);
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.form-actions button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+button.reset {
+  background: var(--neutral-color);
+  color: #ffffff;
+}
+
+button.reset:hover {
+  background: #4b5563;
+  transform: scale(1.05);
+  color: #ffffff; /* Ensure high contrast */
+}
+
+label {
+  font-size: 18px;
+  color: var(--label-color);
+  font-weight: 500;
+  margin-bottom: 8px;
+  transition: color 0.3s linear, transform 0.3s linear;
+}
+
+label:hover {
+  color: var(--secondary-color);
+  transform: scale(1.02);
+}
+
+.tooltip {
+  cursor: help;
+  color: var(--secondary-color);
+  margin-right: 5px;
+  position: relative;
+}
+
+.tooltip:hover::after,
+.tooltip:focus::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--primary-color);
+  color: var(--islamic-text);
+  padding: 8px;
+  font-size: 14px;
+  width: 200px;
+  max-width: 80vw; /* Prevent overflow on mobile */
+  z-index: 100; /* Ensure above form elements */
+  clip-path: polygon(0 0, 100% 0, 100% 90%, 90% 100%, 0 100%);
+}
+
+.input-group {
+  position: relative;
+}
+
+input[type="number"],
+input[type="text"],
+input[type="email"],
+select,
+textarea {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--text-color);
+  transition: all 0.3s linear;
+  position: relative;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border: none;
+}
+
+input:focus::before,
+select:focus::before,
+textarea:focus::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px solid var(--secondary-color);
+  clip-path: polygon(
+    10% 0%,
+    50% 0%,
+    90% 0%,
+    100% 50%,
+    90% 100%,
+    50% 100%,
+    10% 100%,
+    0% 50%
+  );
+  z-index: 1;
+}
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+input.error,
+select.error {
+  border-color: var(--error-color);
+}
+.error-message {
+  color: var(--error-color);
+  font-size: 14px;
+  margin-top: 5px;
+  display: none;
+}
+.error-message.show {
+  display: block;
+}
+button {
+  background: var(--primary-color);
+  color: var(--islamic-text);
+  padding: 14px 24px;
+  border: none;
+  font-size: 18px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.3s linear, box-shadow 0.3s linear;
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 44px;
+  min-height: 44px;
+}
+button:hover {
+  transform: scale(1.05);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+.chart-toggle {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 20px 0;
+}
+.chart-toggle button {
+  background: var(--accent-color);
+  color: var(--islamic-text);
+  padding: 12px 24px;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
+  transition: background 0.3s linear, transform 0.3s linear;
+  min-width: 44px;
+  min-height: 44px;
+}
+.chart-toggle button.active,
+.chart-toggle button:hover {
+  background: var(--secondary-color);
+  transform: scale(1.05);
+}
+.chart-toggle button:focus {
+  outline: 2px solid var(--secondary-color);
+}
+.results-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+.results-actions select {
+  padding: 10px;
+  font-size: 16px;
+  background: var(--accent-color);
+  color: var(--islamic-text);
+  border: 1px solid var(--border-color);
+}
+.share-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+.share-button {
+  background: #25d366;
+  padding: 10px 20px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+}
+.share-button.twitter {
+  background: #1da1f2;
+}
+.share-button:hover {
+  background: #20ba5a;
+}
+.share-button.twitter:hover {
+  background: #1991db;
+}
+#mirath-results,
+#zakat-results {
+  margin-top: 30px;
+  font-size: 16px;
+}
+#mirath-results.show,
+#zakat-results.show {
+  animation: fadeIn 0.5s linear;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+#mirath-calculation-details summary,
+#zakat-calculation-details summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--secondary-color);
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.2);
+}
+#mirath-calculation-details div,
+#zakat-calculation-details div {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  margin-top: 5px;
+}
+#mirath-sharesChart,
+#zakat-sharesChart {
+  width: 100%;
+  max-height: 400px;
+}
+.chart-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 400px;
+  margin: 20px auto;
+  overflow: hidden;
+}
+.chart-container.pdf-capture {
+  overflow: visible;
+  /* Ensure full chart visibility in PDF */
+  display: block;
+}
+.chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 400px;
+  background: var(--background-color);
+}
+#mirath-results table,
+#zakat-results table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.15);
+}
+#mirath-results table caption,
+#zakat-results table caption {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--islamic-text);
+  padding: 10px;
+  background: var(--primary-color);
+}
+#mirath-results table th,
+#mirath-results table td,
+#zakat-results table th,
+#zakat-results table td {
+  padding: 15px;
+  border: 1px solid var(--border-color);
+  text-align: right;
+  min-width: 120px; /* Prevent text wrapping in Arabic */
+}
+#mirath-results table th,
+#zakat-results table th {
+  background: var(--primary-color);
+  color: var(--islamic-text);
+  font-size: 18px;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+#mirath-results table td,
+#zakat-results table td {
+  font-size: 16px;
+}
+#mirath-results table tr:nth-child(even),
+#zakat-results table tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.2);
+}
+#mirath-results table tr:nth-child(odd),
+#zakat-results table tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.1);
+}
+#mirath-results table tfoot td,
+#zakat-results table tfoot td {
+  font-weight: 700;
+  background: var(--secondary-color);
+  color: #ffffff; /* High contrast for accessibility */
+}
+#mirath-accessible-table,
+#zakat-accessible-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.15);
+}
+#mirath-accessible-table th,
+#mirath-accessible-table td,
+#zakat-accessible-table th,
+#zakat-accessible-table td {
+  padding: 15px;
+  border: 1px solid var(--border-color);
+  text-align: right;
+  min-width: 120px; /* Consistent with main tables */
+}
+#mirath-accessible-table th,
+#zakat-accessible-table th {
+  background: var(--primary-color);
+  color: var(--islamic-text);
+  font-weight: 700;
+}
+#mirath-accessible-table tr:nth-child(even),
+#zakat-accessible-table tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.2);
+}
+#mirath-accessible-table tr:nth-child(odd),
+#zakat-accessible-table tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.1);
+}
+.more-info a {
+  color: var(--secondary-color);
+  text-decoration: none;
+}
+.more-info a:hover {
+  text-decoration: underline;
+}
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+.modal.active {
+  display: flex;
+}
+.modal-content {
+  max-width: 600px;
+  width: 90%;
+  padding: 30px;
+  text-align: center;
+  position: relative;
+  overflow-y: auto;
+  max-height: 90vh;
+}
+.modal-content h2 {
+  font-family: 'Amiri', serif;
+  font-size: 28px;
+}
+.carousel-item {
+  display: none;
+  transition: opacity 0.3s linear;
+}
+.carousel-item.active {
+  display: block;
+  opacity: 1;
+}
+.carousel-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--primary-color);
+  color: var(--islamic-text);
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+}
+.carousel-nav.prev {
+  left: 10px;
+}
+.carousel-nav.next {
+  right: 10px;
+}
+.close-modal {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-color);
+  min-width: 44px;
+  min-height: 44px;
+}
+.modal-button {
+  margin-top: 20px;
+  min-width: 44px;
+  min-height: 44px;
+}
+@media (max-width: 768px) {
+  .hero-content h1 {
+    font-size: 32px;
+  }
+  .hero-content p {
+    font-size: 16px;
+  }
+  .cta-button {
+    font-size: 16px;
+    padding: 12px 24px;
+  }
+  .sidebar {
+    width: 100%;
+    right: -100%;
+  }
+  .main-content.sidebar-active {
+    margin-right: 0;
+  }
+  .container {
+    padding: 0 10px;
+  }
+  h2 {
+    font-size: 22px;
+  }
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 14px;
+    padding: 12px;
+  }
+  .chart-container {
+    max-height: 300px;
+  }
+  .chart-container canvas {
+    max-height: 300px;
+  }
+  #mirath-results table,
+  #zakat-results table,
+  #mirath-accessible-table,
+  #zakat-accessible-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+  #mirath-results table th,
+  #mirath-results table td,
+  #zakat-results table th,
+  #zakat-results table td,
+  #mirath-accessible-table th,
+  #mirath-accessible-table td,
+  #zakat-accessible-table th,
+  #zakat-accessible-table td {
+    padding: 10px;
+    min-width: 100px;
+  }
+  #mirath-results table caption,
+  #zakat-results table caption {
+    font-size: 16px;
+  }
+  .progress-stepper {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .step {
+    clip-path: none;
+  }
+  .section-tabs {
+    flex-direction: column;
+  }
+  .tab {
+    clip-path: none;
+  }
+  .chart-toggle button {
+    clip-path: none;
+  }
+  .tooltip::after {
+    width: 150px;
+    max-width: 80vw;
+  }
+}
+@media (min-width: 769px) {
+  .sidebar {
+    right: 0;
+    width: 250px;
+  }
+  .main-content {
+    margin-right: 250px;
+  }
+  .menu-toggle,
+  .close-sidebar {
+    display: none;
+  }
+}
+.important-notify > span {
+  color: red;
+}
